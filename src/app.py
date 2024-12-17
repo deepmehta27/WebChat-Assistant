@@ -13,9 +13,7 @@ import chromadb
 from chromadb.config import Settings
 from langchain.chains import RetrievalQA
 
-# Replace the existing ChromaDB import with this
 client = chromadb.PersistentClient(path="./chroma_db")
-
 chromadb.api.client.SharedSystemClient.clear_system_cache()
 
 load_dotenv()
@@ -75,16 +73,12 @@ def is_query_relevant(user_query, vector_store):
     """
     Check if the user's query matches relevant content from the website.
     """
-    retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.5})
+    retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.7, "k": 2})
     relevant_documents = retriever.get_relevant_documents(user_query)
     
     # Check if the retrieved documents have sufficient similarity
     if not relevant_documents:
         return False
-    
-    # Calculate a threshold for relevance
-    # You can adjust the similarity threshold as needed
-    similarity_threshold = 0.3
     
     # Check if any document has content closely related to the query
     for doc in relevant_documents:
@@ -115,8 +109,8 @@ def get_response(user_query):
     return response['answer']
     
 #app config
-st.set_page_config(page_title="Chat with Websites", page_icon="🧠")
-st.title("Chat with Websites")
+st.set_page_config(page_title="WebChat-Assistant", page_icon="🧠")
+st.title("WebChat-Assistant")
 
 # Add a message for mobile users
 st.info("""
