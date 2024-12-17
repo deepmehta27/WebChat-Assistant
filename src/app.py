@@ -26,8 +26,8 @@ def get_vectorestore_from_url(url):
     
     # More granular text splitting
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,  # Smaller chunks for more precise retrieval
-        chunk_overlap=100,  # Overlap to capture context
+        chunk_size=1000,  # Smaller chunks for more precise retrieval
+        chunk_overlap=200,  # Overlap to capture context
         length_function=len
     )
     document_chunks = text_splitter.split_documents(document)
