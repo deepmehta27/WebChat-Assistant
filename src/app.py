@@ -111,7 +111,7 @@ def get_response(user_query):
     
 #app config
 st.set_page_config(page_title="WebChat-Assistant", page_icon="🧠")
-st.title("Chat with Websites")
+st.title("WebChat-Assistant")
 
 # Add a message for mobile users
 st.info("""
