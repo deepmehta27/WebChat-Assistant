@@ -118,6 +118,13 @@ def get_response(user_query):
 st.set_page_config(page_title="Chat with Websites", page_icon="🧠")
 st.title("Chat with Websites")
 
+# Add a message for mobile users
+st.info("""
+✨ **Using Mobile?**  
+To access settings, tap the **menu icon (>)** in the top-left corner.  
+Enter the website URL there and start chatting!
+""")
+
 #sidebar
 with st.sidebar:
     st.header("Settings")
