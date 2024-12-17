@@ -29,7 +29,7 @@ Chat with Websites is an interactive Streamlit application that allows users to 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/chat-with-websites.git
+git clone https://github.com/deepmehta27/WebChat-Assistant.git
 cd src
 ```
 
