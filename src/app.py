@@ -21,20 +21,22 @@ chromadb.api.client.SharedSystemClient.clear_system_cache()
 load_dotenv()
 
 def get_vectorestore_from_url(url):
-    #get the text in docuents form
     loader = WebBaseLoader(url)
     document = loader.load()
-    #print("Extracted Documents:", [doc.page_content[:200] for doc in document])
-    #split the documents into chunks
-    text_spiltter = RecursiveCharacterTextSplitter() #split the text into chunks using recursive character text splitter
-    document_chunks = text_spiltter.split_documents(document)
     
-    #create a vector store from chuncks
+    # More granular text splitting
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,  # Smaller chunks for more precise retrieval
+        chunk_overlap=100,  # Overlap to capture context
+        length_function=len
+    )
+    document_chunks = text_splitter.split_documents(document)
+    
     vector_store = Chroma.from_documents(
         document_chunks, 
         OpenAIEmbeddings(),
         persist_directory="./chroma_db"
-        ) #using OpenaiEmbeddings to create vectors
+    )
     
     return vector_store
 
@@ -76,14 +78,21 @@ def is_query_relevant(user_query, vector_store):
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
     relevant_documents = retriever.get_relevant_documents(user_query)
     
-    # If no relevant documents are found, return False
+    # Check if the retrieved documents have sufficient similarity
     if not relevant_documents:
         return False
     
-    # If relevant documents are found, check that the content is from the website
-    # For example, you can check the source URL of the document, or just return True if the document exists
-    # Here, we'll assume the document contains useful content related to the website
-    return len(relevant_documents) > 0
+    # Calculate a threshold for relevance
+    # You can adjust the similarity threshold as needed
+    similarity_threshold = 0.3
+    
+    # Check if any document has content closely related to the query
+    for doc in relevant_documents:
+        # You might want to use more sophisticated similarity checking
+        if len(doc.page_content) > 50:  # Ensure document has substantial content
+            return True
+    
+    return False
 
 def get_response(user_query):
     """
