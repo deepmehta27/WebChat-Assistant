@@ -13,11 +13,6 @@ import chromadb
 from chromadb.config import Settings
 from langchain.chains import RetrievalQA
 
-# Replace the existing ChromaDB import with this
-client = chromadb.PersistentClient(path="./chroma_db")
-
-chromadb.api.client.SharedSystemClient.clear_system_cache()
-
 load_dotenv()
 
 def get_vectorestore_from_url(url):
@@ -115,7 +110,7 @@ def get_response(user_query):
     return response['answer']
     
 #app config
-st.set_page_config(page_title="Chat with Websites", page_icon="🧠")
+st.set_page_config(page_title="WebChat-Assistant", page_icon="🧠")
 st.title("Chat with Websites")
 
 # Add a message for mobile users
