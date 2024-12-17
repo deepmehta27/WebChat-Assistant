@@ -14,7 +14,7 @@ from chromadb.config import Settings
 from langchain.chains import RetrievalQA
 
 # Replace the existing ChromaDB import with this
-client = chromadb.PersistentClient(path="./chroma_db")
+client = chromadb.PersistentClient(path="/temp/chroma_db")
 
 chromadb.api.client.SharedSystemClient.clear_system_cache()
 
@@ -35,7 +35,7 @@ def get_vectorestore_from_url(url):
     vector_store = Chroma.from_documents(
         document_chunks, 
         OpenAIEmbeddings(),
-        persist_directory="./chroma_db"
+        persist_directory="/temp/chroma_db"
     )
     
     return vector_store
@@ -75,24 +75,22 @@ def is_query_relevant(user_query, vector_store):
     """
     Check if the user's query matches relevant content from the website.
     """
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
-    relevant_documents = retriever.get_relevant_documents(user_query)
+    retriever = vector_store.as_retriever(
+        search_type="similarity", 
+        search_kwargs={"k": 5}  # Increase number of retrieved documents
+    )
     
-    # Check if the retrieved documents have sufficient similarity
-    if not relevant_documents:
-        return False
-    
-    # Calculate a threshold for relevance
-    # You can adjust the similarity threshold as needed
-    similarity_threshold = 0.3
-    
-    # Check if any document has content closely related to the query
-    for doc in relevant_documents:
-        # You might want to use more sophisticated similarity checking
-        if len(doc.page_content) > 50:  # Ensure document has substantial content
+    try:
+        relevant_documents = retriever.get_relevant_documents(user_query)
+        
+        # If any documents are retrieved, consider the query relevant
+        if relevant_documents:
             return True
-    
-    return False
+        
+        return False
+    except Exception as e:
+        st.error(f"Error checking query relevance: {e}")
+        return False
 
 def get_response(user_query):
     """
