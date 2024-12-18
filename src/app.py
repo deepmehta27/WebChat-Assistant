@@ -13,9 +13,6 @@ import chromadb
 from chromadb.config import Settings
 from langchain.chains import RetrievalQA
 
-client = chromadb.PersistentClient(path="./chroma_db")
-chromadb.api.client.SharedSystemClient.clear_system_cache()
-
 load_dotenv()
 
 def get_vectorestore_from_url(url):
@@ -47,7 +44,7 @@ def get_context_retriever_chain(vector_store):
     prompt = ChatPromptTemplate.from_messages([
         MessagesPlaceholder(variable_name="chat_history"),
         ("user","{input}"),
-        ("user","Given the above conservation, generate a search query to look up in order to get information relevant of the conversation")
+        ("user","Generate a search query to look up in order to get information relevant of the conversation. Otherwise say 'I don't know', dont act smart, give only relevant information")
     ])
     
     retriever_chain = create_history_aware_retriever(llm, retriever, prompt)
@@ -60,7 +57,7 @@ def get_conversational_rag_chain(retriever_chain):
     llm = ChatOpenAI()
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "Answer the user's question as truthfully as possible using the below context:\n\n{context}"),
+        ("system", "Answer the user's question as accurately as possible using the below context:\n\n{context}, if you don't know, say 'I don't know', dont give out answe which are not in the website content"),
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}"),
     ])
@@ -73,7 +70,7 @@ def is_query_relevant(user_query, vector_store):
     """
     Check if the user's query matches relevant content from the website.
     """
-    retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.7, "k": 2})
+    retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.5, "k": 2})
     relevant_documents = retriever.get_relevant_documents(user_query)
     
     # Check if the retrieved documents have sufficient similarity
