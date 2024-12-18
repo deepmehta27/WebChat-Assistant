@@ -1,4 +1,5 @@
 import os
+import requests
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.document_loaders import WebBaseLoader
@@ -10,30 +11,85 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import chromadb
+from typing import List, Optional
+from bs4 import BeautifulSoup
 from chromadb.config import Settings
 from langchain.chains import RetrievalQA
 
 load_dotenv()
 
-def get_vectorestore_from_url(url):
-    loader = WebBaseLoader(url)
-    document = loader.load()
+def extract_text_from_url(url: str) -> Optional[str]:
+    """
+    Enhanced text extraction from websites with multiple fallback methods
+    """
+    try:
+        # Method 1: Requests with BeautifulSoup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Remove script, style, and navigation elements
+        for script in soup(["script", "style", "nav", "header", "footer"]):
+            script.decompose()
+        
+        # Extract text from paragraphs and main content areas
+        text_elements = soup.find_all(['p', 'article', 'div'])
+        
+        # Combine text, filtering out very short or empty strings
+        texts = [elem.get_text(strip=True) for elem in text_elements 
+                 if elem.get_text(strip=True) and len(elem.get_text(strip=True)) > 30]
+        
+        full_text = " ".join(texts)
+        
+        # Minimum text length check
+        if len(full_text) < 100:
+            st.warning("Limited content extracted. The website might have a complex structure.")
+        
+        return full_text
     
-    # More granular text splitting
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Smaller chunks for more precise retrieval
-        chunk_overlap=200,  # Overlap to capture context
-        length_function=len
-    )
-    document_chunks = text_splitter.split_documents(document)
+    except requests.RequestException as e:
+        st.error(f"Error fetching website content: {e}")
+        return None
+
+def get_vectorestore_from_url(url: str):
+    """
+    Enhanced vector store creation with error handling and fallback mechanisms
+    """
+    try:
+        # Extract text using custom method
+        text_content = extract_text_from_url(url)
+        
+        if not text_content:
+            st.error("Could not extract meaningful content from the website.")
+            return None
+        
+        # Create a custom document
+        from langchain_core.documents import Document
+        document = [Document(page_content=text_content, metadata={"source": url})]
+        
+        # Split documents into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,  # Adjust based on your needs
+            chunk_overlap=200  # Some overlap to maintain context
+        )
+        document_chunks = text_splitter.split_documents(document)
+        
+        # Create vector store with error handling
+        vector_store = Chroma.from_documents(
+            document_chunks, 
+            OpenAIEmbeddings(),
+            persist_directory="./chroma_db"
+        )
+        
+        return vector_store
     
-    vector_store = Chroma.from_documents(
-        document_chunks, 
-        OpenAIEmbeddings(),
-        persist_directory="./chroma_db"
-    )
-    
-    return vector_store
+    except Exception as e:
+        st.error(f"Error creating vector store: {e}")
+        return None
 
 # This functions gives the documents which are relevant to the user query
 def get_context_retriever_chain(vector_store):
